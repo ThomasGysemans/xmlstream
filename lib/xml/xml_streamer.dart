@@ -264,6 +264,7 @@ class XmlStreamer {
   /// Makes sure that the characters following `XmlChar.LT` form a valid tag.
   /// Otherwise, just create text from that, because it's probably something like `5<3`.
   /// If the next character is a `XmlChar.SLASH` then it returns `true`.
+  /// If the next character is an exclamation mark, then it returns `true` (the default behavior is necessary for CDATA).
   /// If the tag itself is invalid, it will return `false` and interpret it as text.
   /// Give the [position] of the `XmlChar.LT` character.
   bool _isOpeningValid(int position) {

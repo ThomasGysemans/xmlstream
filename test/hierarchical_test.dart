@@ -22,7 +22,7 @@ main() {
       
       test('using a string', () {
         var c = new Completer();
-        var xmlStreamer = new XmlStreamer(rawText);
+        var xmlStreamer = new XmlStreamer(rawText, strictTagOpenings: true);
         xmlStreamer.read().listen((e) {
           expect(e.state, states[count]);
           expect(e.value, values[count]);
@@ -39,7 +39,7 @@ main() {
         var dir = Directory.current;
         var filePath = p.join(dir.path, './test/test1.xml');
         var stream = new File(filePath).openRead(); 
-        var xmlStreamer = new XmlStreamer.fromStream(stream);
+        var xmlStreamer = new XmlStreamer.fromStream(stream, strictTagOpenings: true);
         xmlStreamer.read().listen((e) {
           expect(e.state, states[streamCount]);
           expect(e.value, values[streamCount]);

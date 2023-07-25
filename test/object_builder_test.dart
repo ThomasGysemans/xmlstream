@@ -5,7 +5,7 @@ void main() {
   test('testing end result items', () {
     var rawText = '<?xml version="1.0" encoding="UTF-8"?><item name="flow">world</item><item name="text">say what?</item>';
     
-    var xmlStreamer = new XmlStreamer(rawText);
+    var xmlStreamer = new XmlStreamer(rawText, strictTagOpenings: true);
     
     var xmlObjectBuilder = new XmlObjectBuilder<Item>(xmlStreamer, new ItemProcessor());
     

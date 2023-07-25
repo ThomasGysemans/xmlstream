@@ -10,7 +10,7 @@ main() {
     int count = 0;
     
     test('basic xml streaming', () {
-      var xmlStreamer = new XmlStreamer(rawText);
+      var xmlStreamer = new XmlStreamer(rawText, strictTagOpenings: true);
       xmlStreamer.read().listen((e) {
         expect(e.state, states[count]);
         expect(e.value, values[count]);

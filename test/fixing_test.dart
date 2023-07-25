@@ -8,12 +8,12 @@ main() {
     var rawText = '''<required/>''';
       
       var states = [XmlState.StartDocument, XmlState.Open, XmlState.Closed, XmlState.EndDocument];
-      var values = ["","required", "required", ""];
+      var values = ["", "required", "required", ""];
       int count = 0;
       
       test('using a string', () {
         var c = new Completer();
-        var xmlStreamer = new XmlStreamer(rawText);
+        var xmlStreamer = new XmlStreamer(rawText, strictTagOpenings: true);
         xmlStreamer.read().listen((e) {
           expect(e.state, states[count]);
           expect(e.value, values[count]);

@@ -16,7 +16,7 @@ main() {
   var values = ["", "", "item", "One Two", "item", ""];
   int count = 0;
 
-  var xmlStreamer = new XmlStreamer.fromStream(stream);
+  var xmlStreamer = new XmlStreamer.fromStream(stream, strictTagOpenings: true);
   test('basic xml streaming', () {
     xmlStreamer.read().listen((e) {
       expect(e.state, states[count]);

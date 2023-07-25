@@ -9,7 +9,7 @@ main() {
   var values = ["", "", "text", '"bonjour" is "hello" in French, et "c\'est utile de le savoir" means "it is useful to know it"', "text", "hello", "world", "hello", "text", 'Did you know that "text" is "texte" in French?', "text", ""];
   int count = 0;
 
-  var xmlStreamer = new XmlStreamer(rawText);
+  var xmlStreamer = new XmlStreamer(rawText, strictTagOpenings: true);
   test('quotes in text', () {
     xmlStreamer.read().listen((e) {
       expect(e.state, states[count]);

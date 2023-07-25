@@ -9,7 +9,7 @@ main() {
     var values = ["", ""," dit is een comment ", "hello", "flow","world", "hello", ""];
     int count = 0;
     
-    var xmlStreamer = new XmlStreamer(rawText);
+    var xmlStreamer = new XmlStreamer(rawText, strictTagOpenings: true);
     test('basic xml streaming', () {
       xmlStreamer.read().listen((e) {
         expect(e.state, states[count]);

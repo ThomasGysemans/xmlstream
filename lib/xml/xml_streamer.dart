@@ -8,6 +8,7 @@ class XmlStreamer {
   String? raw;
   // trim before lt character
   bool trimSpaces = true;
+  bool strictTagOpenings = false;
   String? _open_value;
   late String _cdata;
   late String _comment;
@@ -17,11 +18,13 @@ class XmlStreamer {
   late StreamController<XmlEvent> _controller;
   
   bool _shutdown = false;
+
+  List<String> _raw_characters = [];
   
   
-  XmlStreamer(this.raw, {this.trimSpaces = true});
+  XmlStreamer(this.raw, {this.trimSpaces = true, this.strictTagOpenings = false});
   
-  XmlStreamer.fromStream(this.stream);
+  XmlStreamer.fromStream(this.stream, { this.strictTagOpenings = false });
   
   Stream<XmlEvent> read() {
     _controller = new StreamController<XmlEvent>();
@@ -29,9 +32,10 @@ class XmlStreamer {
   
     String? prev;
     if (this.stream == null) {
-      var chars_raw = this.raw!.split("");
-      for (var ch in chars_raw) {
-        event = _processRawChar(ch, prev, event);
+      _raw_characters = this.raw!.split("");
+      for (int i = 0; i < _raw_characters.length; i++) {
+        String ch = _raw_characters[i];
+        event = _processRawChar(ch, prev, event, i);
         prev = ch;
         if (_shutdown) break;
       }
@@ -40,9 +44,10 @@ class XmlStreamer {
     } else {
       late StreamSubscription controller;
       var onData = (data) {
-        var chars_raw = new String.fromCharCodes(data).split("");
-        for (var ch in chars_raw) {
-          event = _processRawChar(ch, prev, event);
+        _raw_characters = new String.fromCharCodes(data).split("");
+        for (int i = 0; i < _raw_characters.length; i++) {
+          String ch = _raw_characters[i];
+          event = _processRawChar(ch, prev, event, i);
           prev = ch;
           if (_shutdown) {
             controller.cancel();
@@ -60,7 +65,7 @@ class XmlStreamer {
     return _controller.stream;
   }
   
-  XmlEvent _processRawChar(var ch, var prev, XmlEvent event) {
+  XmlEvent _processRawChar(String ch, String? prev, XmlEvent event, int position) {
     switch (event.state) {
       case XmlState.CDATA:
         _cdata += ch;
@@ -81,22 +86,35 @@ class XmlStreamer {
       default:
         switch (ch) {
           case XmlChar.LT:
+            if (strictTagOpenings) {
+              if (!_isOpeningValid(position)) {
+                event = addCharToValue(event, ch);
+                break;
+              }
+            } else if ((position + 1) < _raw_characters.length && _raw_characters[position + 1] == XmlChar.SPACE) {
+              event = addCharToValue(event, ch);
+              break;
+            }
             if (this.trimSpaces) { event.value = event.value!.trim(); }
-            if (event.state != null && event.value!.isNotEmpty) {
+            if (event.value!.isNotEmpty) {
               _addElement(event);
             }
             event = _createXmlEvent(XmlState.Open);
             break;
           case XmlChar.GT:
-            if (prev == XmlChar.SLASH) {
-              if ((event.value!.length > 0) && (event.value!.length - 1) == event.value!.lastIndexOf("/")) {
-                event.value = event.value!.substring(0, event.value!.lastIndexOf("/"));
+            if (event.state == XmlState.Text) {
+              event = addCharToValue(event, ch);
+            } else {
+              if (prev == XmlChar.SLASH) {
+                if ((event.value!.length > 0) && (event.value!.length - 1) == event.value!.lastIndexOf("/")) {
+                  event.value = event.value!.substring(0, event.value!.lastIndexOf("/"));
+                }
+                event = _createXmlEventAndCheck(event, XmlState.Closed);
+                event.value = _open_value;
               }
-              event = _createXmlEventAndCheck(event, XmlState.Closed);
-              event.value = _open_value;
+              _addElement(event);
+              event = _createXmlEvent(XmlState.Text);
             }
-            _addElement(event);
-            event = _createXmlEvent(XmlState.Text);
             break;
           case XmlChar.SLASH:
             if (event.state != XmlState.Open) {
@@ -241,6 +259,40 @@ class XmlStreamer {
     event..value=EMPTY
          ..key=EMPTY;
     return event;
+  }
+
+  /// Makes sure that the characters following `XmlChar.LT` form a valid tag.
+  /// Otherwise, just create text from that, because it's probably something like `5<3`.
+  /// If the next character is a `XmlChar.SLASH` then it returns `true`.
+  /// If the tag itself is invalid, it will return `false` and interpret it as text.
+  /// Give the [position] of the `XmlChar.LT` character.
+  bool _isOpeningValid(int position) {
+    int next_position = position + 1;
+    if (next_position < _raw_characters.length) {
+      if (_raw_characters[next_position] == XmlChar.SLASH) {
+        return true;
+      } else if (_raw_characters[next_position] == XmlChar.SPACE) {
+        return false;
+      } else if (_raw_characters[next_position] == "!") { // it's CDATA, we need to abort this and go back to the normal behavior by returning `true`
+        return true;
+      }
+    } else {
+      return false;
+    }
+    String tagOpening = "";
+    bool closedTag = false;
+    for (int i = position; i < _raw_characters.length; i++) {
+      tagOpening += _raw_characters[i];
+      if (_raw_characters[i] == XmlChar.GT) {
+        closedTag = true;
+        break;
+      }
+    }
+    if (!closedTag) {
+      return false;
+    }
+    final RegExp regex = RegExp(r'<\??[a-z]+(\s[a-z-]+\s*=\s*"[^"]*")*\s*(?:\?|\/)?>');
+    return regex.hasMatch(tagOpening);
   }
   
   void shutdown() { _shutdown = true; }
